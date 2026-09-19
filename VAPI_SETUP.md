@@ -72,29 +72,21 @@ Built as a custom Function tool, published, and attached to the assistant.
 Attached to the BIKASS assistant, version pinned to "Latest" so it
 auto-updates if the tool config changes later.
 
-## 3. Order logging — Google Sheets tool created, BLOCKED ON YOU
+## 3. Order logging — DONE (2026-09-19)
 
-Tool `log_order` exists in Vapi (Google Sheets → Add Row type), with name,
-description, and Range (`Sheet1!A:E`) filled in. It is **not usable yet**
-because the two required things only you can provide are still missing:
+Google Sheet "BIKASS Orders" created, header row set:
+Timestamp | Customer Name | Phone Number | Order Items | Total Price.
+Spreadsheet ID `1OW-s0NWhbLlJBV0Qv1023rM3YzUVqjwH-CIeh4H2wWw`, Range
+`Sheet1!A:E`. Tool `log_order` (Google Sheets → Add Row) published in
+Vapi with name, description, Spreadsheet ID, and Range all set and
+verified by reading the live saved values back — attached to the
+assistant, pinned to "Latest".
 
-1. **A real Google Sheet.** None exists yet. Create one with a header row
-   matching this column order:
-   1. Timestamp
-   2. Customer Name
-   3. Phone Number
-   4. Order Items (full item + quantity list, one text field)
-   5. Total Price (from the calculate_total tool result, not recomputed)
-2. **The Spreadsheet ID** from that sheet's URL
-   (`https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`), pasted
-   into the tool's Spreadsheet ID field.
-3. Likely also a **Google account connection** for Vapi to write to Sheets
-   on your behalf (check Dashboard → Integrations if the tool errors on
-   first use asking for authorization) — not confirmed since there's
-   nothing to test against yet.
-
-It's already attached to the assistant, so once you fill in the
-Spreadsheet ID, no further wiring should be needed.
+**Not yet confirmed**: whether Vapi actually has permission to write to
+this sheet. No test order has been logged yet — first real or test call
+will reveal whether a Google account authorization step is still needed
+(check Dashboard → Integrations if the tool errors on first use). Treat
+this as unverified until a row actually lands in the sheet.
 
 ## 4. Deploy order-calculator — DONE (2026-09-19)
 

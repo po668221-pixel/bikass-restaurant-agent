@@ -102,10 +102,12 @@ not just a one-off tool.
    ("Audrey"), First Message + System Prompt pasted and verified
    byte-for-byte against the live field. See `VAPI_SETUP.md` for exact
    config. Assistant still named "New Assistant" — cosmetic, rename anytime.
-3. 🔶 Google Sheets order-logging tool — tool created in Vapi and attached
-   to the assistant, but non-functional: needs a real Google Sheet, its
-   Spreadsheet ID, and possibly a Google account connection — all your
-   input, not something buildable without you. See `VAPI_SETUP.md` step 3.
+3. ✅ Google Sheets order-logging tool — Google Sheet "BIKASS Orders"
+   created with the 5-column header row, `log_order` tool published in
+   Vapi with the real Spreadsheet ID and Range, attached to the assistant
+   (2026-09-19). NOT yet confirmed it can actually write — no test order
+   has landed in the sheet yet, so a Google account authorization step
+   inside Vapi might still be needed. Verify on first test call.
 4. ✅ Order-total calculator webhook — deployed, live at
    https://bikass-restaurant-agent.onrender.com, wired into Vapi as the
    `calculate_total` function tool, published and attached to the
