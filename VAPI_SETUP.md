@@ -7,9 +7,10 @@ Step 3 (Google Sheets) is blocked on your input — see that section.
 
 ## 1. Assistant — DONE
 
-Created a new assistant (currently named "New Assistant" — rename it to
-"Ada" or similar whenever you like, purely cosmetic, no functional effect).
-Configured to match the confirmed stack, not left on Vapi's defaults:
+Created and named "Ada" (renamed 2026-09-19, purely cosmetic — the "Edit
+Assistant Name" dialog is reached via the small pencil icon next to the
+name at the top of the assistant page, hidden until hover). Configured to
+match the confirmed stack, not left on Vapi's defaults:
 - **Transcriber**: Deepgram Nova 3 (was defaulted to Soniox)
 - **Model**: Claude Haiku 4.5, temperature 0.3 (was defaulted to GPT-4.1).
   Picked Haiku over Sonnet/Opus specifically for latency — this task is

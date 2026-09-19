@@ -98,10 +98,10 @@ not just a one-off tool.
 1. ✅ Menu structuring — done, see `restaurant_menu.xlsx` (131 items, 8
    categories, priced in Naira; was 133, collapsed 4 turkey entries to 2)
 2. ✅ Core conversation build — assistant built directly in Vapi (2026-09-19,
-   published v2): Deepgram Nova 3, Claude Haiku 4.5, Cartesia Sonic 3.5
-   ("Audrey"), First Message + System Prompt pasted and verified
+   published v2), named "Ada": Deepgram Nova 3, Claude Haiku 4.5, Cartesia
+   Sonic 3.5 ("Audrey"), First Message + System Prompt pasted and verified
    byte-for-byte against the live field. See `VAPI_SETUP.md` for exact
-   config. Assistant still named "New Assistant" — cosmetic, rename anytime.
+   config.
 3. ✅ Google Sheets order-logging tool — Google Sheet "BIKASS Orders"
    created with the 5-column header row, `log_order` tool published in
    Vapi with the real Spreadsheet ID and Range, attached to the assistant
