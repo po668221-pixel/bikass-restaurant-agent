@@ -123,6 +123,22 @@ not just a one-off tool.
 Rough total estimate: 50-70 hours. Treat all phase timings as estimates that
 will shift once real testing starts, not commitments.
 
+## Real bug found and fixed via Render logs (2026-09-19)
+The user's first real order attempt failed at checkout: `calculate_total`
+returned HTTP 500 on all 3 attempts during the call, so Ada could never
+give a total and had to punt to a callback. Root cause, found by reading
+actual Render runtime logs (not guessed): `call.arguments` was `undefined`
+— Vapi's real tool-call payload for this Claude/Anthropic setup nests
+arguments under `call.function.arguments`, not flat on `call.arguments`
+like the docs.vapi.ai page implied when checked earlier. Fixed in
+`order-calculator/index.js` to handle both shapes, never throw on a bad
+payload, and log the raw request body so a future shape mismatch is
+visible in Render logs instead of a silent crash. Verified against the
+exact order that failed (2 Fried Rice + 1 Fried Turkey + 1 Chivita =
+₦12,200) on the live deployment. **Lesson**: don't trust a fetched docs
+page as ground truth for a third-party API's actual wire format — verify
+against production logs when something real fails.
+
 ## Corrections from the user's first real test call (2026-09-19)
 - **Restaurant name mispronounced.** "BIKASS" spelled that way was read
   wrong by Cartesia's TTS. Fixed by respelling it "Bika's" everywhere in
