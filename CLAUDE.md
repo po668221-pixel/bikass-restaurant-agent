@@ -97,15 +97,21 @@ not just a one-off tool.
 ## Roadmap status
 1. ✅ Menu structuring — done, see `restaurant_menu.xlsx` (131 items, 8
    categories, priced in Naira; was 133, collapsed 4 turkey entries to 2)
-2. 🔶 Core conversation build — system prompt drafted, see
-   `bikass_agent_system_prompt.md`. NOT yet pasted into Vapi or tested.
-3. ⬜ Google Sheets order-logging tool — not yet built in Vapi
-4. 🔶 Order-total calculator webhook — code written and deployed, see
-   `order-calculator/`. Live at https://bikass-restaurant-agent.onrender.com
-   on Render's Free tier, verified working with real requests (2026-09-19).
-   NOT yet wired into Vapi as a `calculate_total` tool — see
-   `VAPI_SETUP.md`. Free tier spins down after 15 min idle (~30-50s wake
-   delay) — decide whether to upgrade before real customers call.
+2. ✅ Core conversation build — assistant built directly in Vapi (2026-09-19,
+   published v2): Deepgram Nova 3, Claude Haiku 4.5, Cartesia Sonic 3.5
+   ("Audrey"), First Message + System Prompt pasted and verified
+   byte-for-byte against the live field. See `VAPI_SETUP.md` for exact
+   config. Assistant still named "New Assistant" — cosmetic, rename anytime.
+3. 🔶 Google Sheets order-logging tool — tool created in Vapi and attached
+   to the assistant, but non-functional: needs a real Google Sheet, its
+   Spreadsheet ID, and possibly a Google account connection — all your
+   input, not something buildable without you. See `VAPI_SETUP.md` step 3.
+4. ✅ Order-total calculator webhook — deployed, live at
+   https://bikass-restaurant-agent.onrender.com, wired into Vapi as the
+   `calculate_total` function tool, published and attached to the
+   assistant (2026-09-19). Free tier spins down after 15 min idle
+   (~30-50s wake delay) — decide whether to upgrade before real customers
+   call.
 5. ⬜ Real accent testing — 10-15 real people with genuine Nigerian-accented
    English calling and ordering naturally. Not started. This is expected to
    be the longest phase — don't let it get rushed or skipped.

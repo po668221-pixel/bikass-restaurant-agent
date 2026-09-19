@@ -1,20 +1,34 @@
-# Vapi dashboard setup — copy-paste steps
+# Vapi dashboard setup
 
 Everything here is verified against docs.vapi.ai (fetched 2026-09-19), not
-guessed. The one thing that can't be filled in ahead of time is your
-deployed webhook URL (order-calculator isn't deployed yet).
+guessed. Steps 1 and 2 are DONE — built directly in your Vapi dashboard on
+2026-09-19 (assistant id `6b526a6f-e8cf-42f2-8904-3027...`, published v2).
+Step 3 (Google Sheets) is blocked on your input — see that section.
 
-## 1. Assistant — First Message and System Prompt
+## 1. Assistant — DONE
 
-Dashboard → Assistants → your BIKASS assistant:
-- **First Message** field: paste the contents of the "First Message" block
-  in `bikass_agent_system_prompt.md`.
-- **System Prompt** field: paste the contents of the "System Prompt" code
-  block in the same file.
+Created a new assistant (currently named "New Assistant" — rename it to
+"Ada" or similar whenever you like, purely cosmetic, no functional effect).
+Configured to match the confirmed stack, not left on Vapi's defaults:
+- **Transcriber**: Deepgram Nova 3 (was defaulted to Soniox)
+- **Model**: Claude Haiku 4.5, temperature 0.3 (was defaulted to GPT-4.1).
+  Picked Haiku over Sonnet/Opus specifically for latency — this task is
+  mostly scripted order-taking + tool calls, not deep reasoning, and every
+  extra 500ms of model latency is dead air the caller sits through.
+- **Voice**: Cartesia Sonic 3.5, voice "Audrey — customer service" (was
+  defaulted to Vapi's own "Elliot" voice). No Nigerian-accented option
+  exists in Cartesia's voice library as of this check — worth revisiting
+  once real accent testing starts, per CLAUDE.md.
+- **First Message** and **System Prompt**: pasted verbatim from
+  `bikass_agent_system_prompt.md` and verified byte-for-byte against the
+  live textarea afterward — no drift.
+- **Voice fallback**: enabled Vapi's suggested auto-fallback (backup voice
+  if Cartesia has an outage) — pure reliability upside, no behavior change
+  in normal operation.
 
-## 2. calculate_total — custom Function tool
+## 2. calculate_total — DONE, published and attached
 
-Dashboard → Tools → Create Tool → **Function**.
+Built as a custom Function tool, published, and attached to the assistant.
 
 - **Name**: `calculate_total`
 - **Server URL**: `https://bikass-restaurant-agent.onrender.com/calculate-total`
@@ -22,7 +36,8 @@ Dashboard → Tools → Create Tool → **Function**.
   error for unrecognized item names. Note: free-tier Render spins down
   after 15 min idle — expect ~30-50s delay on the first call after a quiet
   period until you upgrade off Free (see step 4).
-- **Parameters** (paste as the JSON schema):
+- **Parameters** (the JSON schema actually saved, verified via direct DOM
+  read against the live field — not just what was intended to be typed):
 
 ```json
 {
@@ -50,40 +65,36 @@ Dashboard → Tools → Create Tool → **Function**.
 }
 ```
 
-- **Description** (shown to the model, helps it call the tool correctly):
-  "Computes the exact total price for a list of menu items and quantities.
-  Always call this before reading a total back to the caller — never
-  calculate it yourself."
+- **Description**: "Computes the exact total price for a list of menu
+  items and quantities. Always call this before reading a total back to
+  the caller — never calculate it yourself."
 
-Attach this tool to the BIKASS assistant. The system prompt already
-references it by name (`calculate_total`) in the CONVERSATION FLOW and
-TOOL USE sections, so no prompt changes are needed once it's attached.
+Attached to the BIKASS assistant, version pinned to "Latest" so it
+auto-updates if the tool config changes later.
 
-## 3. Order logging — native Google Sheets "Add Row" tool
+## 3. Order logging — Google Sheets tool created, BLOCKED ON YOU
 
-Dashboard → Tools → Create Tool → **Google Sheets → Add Row**.
+Tool `log_order` exists in Vapi (Google Sheets → Add Row type), with name,
+description, and Range (`Sheet1!A:E`) filled in. It is **not usable yet**
+because the two required things only you can provide are still missing:
 
-Confirmed limitation from Vapi's own docs: this integration only appends
-rows — it cannot read, look up, or update existing spreadsheet data. That
-matches the design in CLAUDE.md (write-only logging), so no workaround
-needed here.
+1. **A real Google Sheet.** None exists yet. Create one with a header row
+   matching this column order:
+   1. Timestamp
+   2. Customer Name
+   3. Phone Number
+   4. Order Items (full item + quantity list, one text field)
+   5. Total Price (from the calculate_total tool result, not recomputed)
+2. **The Spreadsheet ID** from that sheet's URL
+   (`https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`), pasted
+   into the tool's Spreadsheet ID field.
+3. Likely also a **Google account connection** for Vapi to write to Sheets
+   on your behalf (check Dashboard → Integrations if the tool errors on
+   first use asking for authorization) — not confirmed since there's
+   nothing to test against yet.
 
-- **spreadsheetId**: from your sheet's URL —
-  `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`
-- **range**: the sheet/tab name, e.g. `Sheet1`
-- **values**: maps to columns in order. Suggested column order (create a
-  header row in your sheet matching this before testing):
-
-  1. Timestamp
-  2. Customer Name
-  3. Phone Number
-  4. Order Items (the full item + quantity list, as one text field)
-  5. Total Price (the number from the calculate_total tool result — not a
-     separate calculation)
-
-The system prompt's TOOL USE section already tells the agent to log these
-five fields and to use the total from `calculate_total` rather than
-recomputing it. Attach this tool alongside `calculate_total`.
+It's already attached to the assistant, so once you fill in the
+Spreadsheet ID, no further wiring should be needed.
 
 ## 4. Deploy order-calculator — DONE (2026-09-19)
 
