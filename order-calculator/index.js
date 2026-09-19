@@ -161,18 +161,32 @@ function calculateTotal(items) {
   return { total, lineItems, unknown };
 }
 
-// Vapi custom-tool webhook contract (docs.vapi.ai/tools/custom-tools):
-// it POSTs { message: { toolCallList: [{ id, name, arguments }] } }
-// and expects { results: [{ toolCallId, result }] } back.
+// Vapi's real tool-call payload shape has varied in practice between
+// { id, arguments } and { id, function: { arguments } } depending on the
+// model provider. This crashed in production (TypeError: Cannot read
+// properties of undefined (reading 'items')) because only the flat shape
+// was handled. Logging the raw body so any future shape change shows up
+// in Render logs instead of a silent 500.
 app.post('/calculate-total', (req, res) => {
+  console.log('calculate-total request body:', JSON.stringify(req.body));
+
   const toolCalls = req.body.message?.toolCallList || [];
 
   const results = toolCalls.map((call) => {
-    const args = typeof call.arguments === 'string'
-      ? JSON.parse(call.arguments)
-      : call.arguments;
+    const rawArgs = call.arguments ?? call.function?.arguments;
 
-    const { total, lineItems, unknown } = calculateTotal(args.items || []);
+    let args;
+    try {
+      args = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs;
+    } catch (e) {
+      return { toolCallId: call.id, result: `Error: could not parse tool arguments (${e.message}).` };
+    }
+
+    if (!args || !Array.isArray(args.items)) {
+      return { toolCallId: call.id, result: 'Error: no items array received in tool call.' };
+    }
+
+    const { total, lineItems, unknown } = calculateTotal(args.items);
 
     if (unknown.length > 0) {
       return {
