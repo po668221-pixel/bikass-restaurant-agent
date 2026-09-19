@@ -123,21 +123,41 @@ not just a one-off tool.
 Rough total estimate: 50-70 hours. Treat all phase timings as estimates that
 will shift once real testing starts, not commitments.
 
-## Real bug found and fixed via Render logs (2026-09-19)
-The user's first real order attempt failed at checkout: `calculate_total`
-returned HTTP 500 on all 3 attempts during the call, so Ada could never
-give a total and had to punt to a callback. Root cause, found by reading
-actual Render runtime logs (not guessed): `call.arguments` was `undefined`
-— Vapi's real tool-call payload for this Claude/Anthropic setup nests
-arguments under `call.function.arguments`, not flat on `call.arguments`
-like the docs.vapi.ai page implied when checked earlier. Fixed in
-`order-calculator/index.js` to handle both shapes, never throw on a bad
-payload, and log the raw request body so a future shape mismatch is
-visible in Render logs instead of a silent crash. Verified against the
-exact order that failed (2 Fried Rice + 1 Fried Turkey + 1 Chivita =
-₦12,200) on the live deployment. **Lesson**: don't trust a fetched docs
-page as ground truth for a third-party API's actual wire format — verify
-against production logs when something real fails.
+## Two real bugs found and fixed via logs, not guesses (2026-09-19)
+
+**Bug 1 — webhook crash.** First order attempt: `calculate_total`
+returned HTTP 500 on all 3 attempts, so Ada punted to a callback. Root
+cause, found in Render's runtime logs: `call.arguments` was `undefined`
+because Vapi's real payload nests arguments under `call.function.arguments`
+for this setup, not flat like docs.vapi.ai implied when checked earlier.
+Fixed `order-calculator/index.js` to handle both shapes, never throw on a
+bad payload, and log the raw request body so a future mismatch is visible
+instead of a silent crash.
+
+**Bug 2 — the real blocker.** After fixing bug 1, a second test call still
+failed: `calculate_total` returned "no items array received" every time.
+Render logs showed why: Claude was calling the tool with `arguments: {}`
+— completely empty. Checked the tool's own Parameters config in Vapi and
+found the schema was silently empty (`properties: {}`), even though it
+had been built and published earlier in this project. Root cause: an
+earlier click on the Parameters "Visual" tab (dismissed as a no-op at the
+time) reset the schema, and that empty state got published without being
+re-verified. Claude had no way to know an `items` parameter existed, so
+it called the tool with nothing. **The Parameters JSON editor in Vapi has
+its own "Apply" button below the code box, separate from the tool's
+top-level Publish — editing the JSON without clicking Apply does not
+persist, and Publish won't even show a pending change.** Rebuilt the
+schema via the JSON tab, clicked Apply, then Published, then verified by
+reloading the page fresh (not trusting in-session state) and confirming
+`items` shows in the Visual tab. Also caught mid-investigation: with an
+empty schema, Ada fell back to calculating the total herself and got it
+wrong (said 5250 for an order that's actually 4150) — the exact failure
+mode `calculate_total` exists to prevent, now confirmed fixed.
+
+**Lesson**: don't trust a fetched docs page as ground truth for a
+third-party API's wire format, and don't trust a UI's "saved" appearance
+without reloading fresh to confirm — verify against production logs and
+a clean reload when something real fails.
 
 ## Corrections from the user's first real test call (2026-09-19)
 - **Restaurant name mispronounced.** "BIKASS" spelled that way was read
