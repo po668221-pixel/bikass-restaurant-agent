@@ -100,8 +100,12 @@ not just a one-off tool.
 2. 🔶 Core conversation build — system prompt drafted, see
    `bikass_agent_system_prompt.md`. NOT yet pasted into Vapi or tested.
 3. ⬜ Google Sheets order-logging tool — not yet built in Vapi
-4. ⬜ Order-total calculator webhook — code written, see
-   `order-calculator/`, not yet deployed or wired into Vapi as a tool
+4. 🔶 Order-total calculator webhook — code written and deployed, see
+   `order-calculator/`. Live at https://bikass-restaurant-agent.onrender.com
+   on Render's Free tier, verified working with real requests (2026-09-19).
+   NOT yet wired into Vapi as a `calculate_total` tool — see
+   `VAPI_SETUP.md`. Free tier spins down after 15 min idle (~30-50s wake
+   delay) — decide whether to upgrade before real customers call.
 5. ⬜ Real accent testing — 10-15 real people with genuine Nigerian-accented
    English calling and ordering naturally. Not started. This is expected to
    be the longest phase — don't let it get rushed or skipped.

@@ -17,9 +17,11 @@ Dashboard → Assistants → your BIKASS assistant:
 Dashboard → Tools → Create Tool → **Function**.
 
 - **Name**: `calculate_total`
-- **Server URL**: your deployed order-calculator URL + `/calculate-total`
-  (e.g. `https://your-app.onrender.com/calculate-total`) — not usable
-  until step 4 below is done.
+- **Server URL**: `https://bikass-restaurant-agent.onrender.com/calculate-total`
+  — deployed and verified live (2026-09-19): correct totals, and a clean
+  error for unrecognized item names. Note: free-tier Render spins down
+  after 15 min idle — expect ~30-50s delay on the first call after a quiet
+  period until you upgrade off Free (see step 4).
 - **Parameters** (paste as the JSON schema):
 
 ```json
@@ -83,24 +85,21 @@ The system prompt's TOOL USE section already tells the agent to log these
 five fields and to use the total from `calculate_total` rather than
 recomputing it. Attach this tool alongside `calculate_total`.
 
-## 4. Deploy order-calculator (blocks steps 2's Server URL)
+## 4. Deploy order-calculator — DONE (2026-09-19)
 
-Not done yet — needs your accounts, so this session can't do it directly.
-Pick one:
-- **Render** (recommended — free tier, detects `npm start` automatically
-  from `package.json`, no extra config file needed): New → Web Service →
-  connect the GitHub repo → it just works.
-- **Railway**: similar, GitHub-connected, auto-detects Node.
-- **Vercel**: works, but Vercel is serverless-first — an Express app like
-  this one needs a `vercel.json` rewrite to route requests to it. Skip
-  unless you specifically want Vercel.
+Deployed on Render's Free tier, service name `bikass-restaurant-agent`,
+root directory `order-calculator`, build `npm install`, start `npm start`.
+Live at https://bikass-restaurant-agent.onrender.com and verified working
+(see step 2).
 
-This machine has git installed but no `gh` CLI and no logged-in
-Render/Railway/Vercel account, so the actual "create repo on GitHub" +
-"connect it on Render" steps need you, in your own browser, logged into
-your own accounts. Once you've pushed this repo to GitHub and connected it
-on your chosen platform, come back with the live URL and I'll fill it into
-step 2 and re-verify the tool end-to-end.
+Remaining decision: Free tier spins down after 15 min idle, causing a
+~30-50s delay on the next call while it wakes up. For a live phone line,
+that means a caller could sit in silence for that long the first time
+`calculate_total` fires after any quiet period. Options before going live
+with real customers:
+- Upgrade to Render's $7/month plan (no spin-down) — Render → your service
+  → Settings → change Instance Type.
+- Or accept the risk for early testing and upgrade before soft launch.
 
 ## 5. Before trusting any of this in production
 
