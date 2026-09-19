@@ -123,6 +123,20 @@ not just a one-off tool.
 Rough total estimate: 50-70 hours. Treat all phase timings as estimates that
 will shift once real testing starts, not commitments.
 
+## Corrections from the user's first real test call (2026-09-19)
+- **Restaurant name mispronounced.** "BIKASS" spelled that way was read
+  wrong by Cartesia's TTS. Fixed by respelling it "Bika's" everywhere in
+  the spoken-facing text (First Message + System Prompt) — the written
+  project name stays "BIKASS" in docs, only the TTS-facing spelling
+  changed. Confirmed live in Vapi v4.
+- **Prices read in the wrong number style.** The agent was reading amounts
+  like 13400 as "thirteen four hundred" (clipped Western shorthand)
+  instead of the Nigerian convention "thirteen thousand, four hundred
+  naira". Added an explicit rule (PRICING RULES rule 5) requiring
+  "thousand" to always be said for amounts ≥1,000. Confirmed live in
+  Vapi v4. **Not yet re-tested** — user should verify this actually fixed
+  it on the next test call before trusting it.
+
 ## Explicitly unresolved — verify before assuming true
 - Whether Deepgram Nova-3 actually handles Nigerian-accented English well
   enough as-is, or needs a custom vocabulary list built from real test-call
