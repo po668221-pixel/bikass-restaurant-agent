@@ -141,6 +141,49 @@ const PRICES = {
   "Red Velvet Cake": 3500
 };
 
+// Converts a whole number of naira into Nigerian-style spoken words, e.g.
+// 14450 -> "fourteen thousand, four hundred and fifty naira". Exists so the
+// agent never has to convert digits to words itself — it kept lapsing into
+// clipped Western-style reading ("4 8 0 0") despite prompt instructions.
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+function threeDigitsToWords(n) {
+  const parts = [];
+  if (n >= 100) {
+    parts.push(`${ONES[Math.floor(n / 100)]} hundred`);
+    n %= 100;
+    if (n > 0) parts.push('and');
+  }
+  if (n >= 20) {
+    const tens = TENS[Math.floor(n / 10)];
+    const rem = n % 10;
+    parts.push(rem > 0 ? `${tens}-${ONES[rem]}` : tens);
+  } else if (n > 0) {
+    parts.push(ONES[n]);
+  }
+  return parts.join(' ');
+}
+
+function numberToWords(num) {
+  if (num === 0) return 'zero';
+  const millions = Math.floor(num / 1e6);
+  const thousands = Math.floor((num % 1e6) / 1e3);
+  const remainder = num % 1000;
+
+  const parts = [];
+  if (millions) parts.push(`${threeDigitsToWords(millions)} million`);
+  if (thousands) parts.push(`${threeDigitsToWords(thousands)} thousand`);
+  if (remainder) parts.push(threeDigitsToWords(remainder));
+
+  return parts.join(', ');
+}
+
+function totalToNairaWords(total) {
+  return `${numberToWords(total)} naira`;
+}
+
 function calculateTotal(items) {
   let total = 0;
   const lineItems = [];
@@ -197,7 +240,7 @@ app.post('/calculate-total', (req, res) => {
 
     return {
       toolCallId: call.id,
-      result: JSON.stringify({ total, lineItems }),
+      result: JSON.stringify({ total, totalWords: totalToNairaWords(total), lineItems }),
     };
   });
 
