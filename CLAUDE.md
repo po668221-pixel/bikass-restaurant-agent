@@ -173,6 +173,48 @@ a clean reload when something real fails.
   Vapi v4. **Not yet re-tested** — user should verify this actually fixed
   it on the next test call before trusting it.
 
+## Third round of real-call findings (2026-09-21)
+- **Google Sheets logging is intermittently failing.** A live call showed
+  `Log Order: Missing Nango configuration for tool type: google.sheets.row.a...`
+  even though other calls logged successfully. Root cause: Vapi's native
+  Google Sheets integration (Dashboard → Settings → Integrations → Google
+  Sheets) was never actually OAuth-connected — it showed "Connect", not
+  "Connected". This is separate from the Spreadsheet ID/Range config,
+  which was correct. **User needs to click Connect and complete Google
+  sign-in themselves** — this can't be done from an automated session.
+  Until connected, some fraction of orders may say "confirmed" to the
+  caller but never actually land in the sheet. Verify by connecting, then
+  making a test call and checking the sheet directly.
+- **Latency (~1,330ms avg turn) is normal for this stack, not a bug.**
+  Checked Vapi's real Latency Summary for a call: Transcriber 201ms +
+  Endpointing 305ms + LLM 488ms + Voice 305ms ≈ matches the average.
+  That's close to the practical floor for a Deepgram+Claude+Cartesia
+  pipeline — not something a setting can fix without a different
+  architecture. The real outliers (4 of 25 turns hit 2,000-2,600ms) were
+  all caused by Endpointing spiking to 1,500ms+, which happens when a
+  caller trails off or hesitates mid-sentence and the turn-detector isn't
+  sure they're done. Not something to "fix" so much as an inherent
+  trade-off of waiting long enough to avoid interrupting people.
+- **Audio "skips" during Ada's speech — cause not identified.** No
+  evidence found yet pinpointing this (not visible in the latency data).
+  Possible causes not yet ruled out: Cartesia streaming hiccups, the
+  voice-fallback feature switching mid-response, or an artifact specific
+  to browser-based Talk-button testing (WebRTC) vs a real phone call.
+  Revisit if it keeps happening once a real phone number is attached.
+- **Money still occasionally read digit-by-digit despite the earlier
+  fix.** Same call: agent said "4 8 0 0 naira" and "5 5 0 0" during
+  chicken disambiguation, even though the final total was read correctly.
+  The earlier prompt-only fix wasn't reliable enough for ad-hoc price
+  mentions. Fixed properly this time: `calculate_total` now returns a
+  `totalWords` field (e.g. "fourteen thousand, four hundred and fifty
+  naira") computed deterministically in code, and the agent is told to
+  read that verbatim instead of converting the number itself. Also
+  spelled out the disambiguation prices (chicken/Bole-and-Fish/turkey)
+  directly in the prompt so those specific ad-hoc mentions don't rely on
+  the model's own number-to-words conversion either. **Not yet verified
+  on a real call** — verify on the next test call that both the total and
+  the chicken-price disambiguation are read correctly.
+
 ## Explicitly unresolved — verify before assuming true
 - Whether Deepgram Nova-3 actually handles Nigerian-accented English well
   enough as-is, or needs a custom vocabulary list built from real test-call
