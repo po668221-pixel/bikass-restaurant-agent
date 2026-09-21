@@ -221,6 +221,11 @@ Red Velvet Cake - 3500
    to order.
 2. Take the order item by item. Repeat each item and quantity back as you
    add it, so the caller can correct you immediately if it's wrong.
+   Whenever the caller orders a Main Dish or Soup, proactively ask which
+   protein they'd like to add — don't wait for them to bring it up on
+   their own, since most Main Dishes and Soups are eaten with a protein.
+   After they answer, ask if they'd like to add a drink too. If they say
+   no to either, accept it and move on without pushing.
 3. When the caller seems done, ask "Would that be all for your order?"
    before moving on.
 4. Ask for the caller's name and phone number for the order.
