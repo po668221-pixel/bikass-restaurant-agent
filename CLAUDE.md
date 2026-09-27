@@ -114,9 +114,12 @@ not just a one-off tool.
    assistant (2026-09-19). Free tier spins down after 15 min idle
    (~30-50s wake delay) — decide whether to upgrade before real customers
    call.
-5. ⬜ Real accent testing — 10-15 real people with genuine Nigerian-accented
-   English calling and ordering naturally. Not started. This is expected to
-   be the longest phase — don't let it get rushed or skipped.
+5. 🔶 Real accent testing — in progress. ~9-10 real calls collected so far
+   (friends/family across Edo, Calabar, Abuja, Yoruba/Hausa, Niger/Kano,
+   Kogi, Western Nigeria, Lagos backgrounds), logged in the "Bika's Accent
+   Test Log" Google Sheet. Three concrete fixes already shipped from this
+   data (see "Fourth round" below); scaling to 15-30 callers next. Don't
+   let it get rushed or skipped just because fixes have started landing.
 6. ⬜ Edge cases / human handoff refinement
 7. ⬜ Soft launch, watched closely for the first week or two
 
@@ -214,6 +217,125 @@ a clean reload when something real fails.
   the model's own number-to-words conversion either. **Not yet verified
   on a real call** — verify on the next test call that both the total and
   the chicken-price disambiguation are read correctly.
+
+## Fourth round: accent-testing fixes (2026-09-25)
+
+Three structural bugs surfaced by real tester-call data, all fixed live in
+Vapi's dashboard (not in the local `bikass_agent_system_prompt.md` file,
+which has drifted from the live prompt — treat the Vapi dashboard as source
+of truth until that file is re-synced).
+
+- **"Jollof Rice" misheard by 5+ independent callers** (v7-v8) — heard as
+  "chill of rice," "jelly rice," "jule of rice," "your love rice,"
+  "Jennifer Rice." Fixed two ways: Deepgram Transcriber keyword boosting
+  added for "Jollof Rice" and "portion," plus an explicit PRICING RULES
+  entry telling Ada to treat near-miss phrases as "Jollof Rice" rather than
+  asking the caller to repeat themselves. **Not independently stress-tested
+  since the fix** — the one confirm call made after this (see below) had
+  the caller say "Jollof Rice" clearly, so it didn't exercise the misheard
+  case. Low risk since keyword boosting is passive, but don't claim this is
+  proven fixed until a real mumbled/accented instance is caught cleanly.
+- **Calls not ending properly** (v9-v10) — transcripts showed Ada saying
+  goodbye then continuing to talk, or both sides looping "goodbye" for over
+  a minute until a silence timeout. Root cause: Vapi's Advanced → End Call
+  Phrases field was completely empty, so Ada had no actual way to hang up,
+  only to say the word. Fixed by setting End Call Phrases to "have a great
+  day,have a good day,take care,goodbye,bye now" and rewriting CONVERSATION
+  FLOW step 10 to use one of those exact phrases once, without repeating or
+  asking "anything else?" **Confirmed fixed** on a real call afterward
+  (Call ID `01a0da0f...f94e`, v10, 2026-09-25): Ended Reason showed
+  "Assistant said end call phrase," not "Silence" or "Customer" — clean
+  immediate hangup, no loop.
+- **"Feels slow" feedback, hypothesized cause: long menu recitations, not
+  raw latency** (v11) — several transcripts showed Ada reading out 20-25
+  items verbatim in one breath when asked about a category. The per-turn
+  latency itself (~1,330-1,356ms avg, confirmed again on the v10 confirm
+  call above, no drift) is already near the practical floor for this stack
+  and isn't the real culprit. Fix: added a rule under THE MENU telling Ada
+  to name 4-5 popular items from a category plus "and more — want me to go
+  through the full list?" instead of reciting everything, and to only give
+  the full list if the caller explicitly asks. Deliberately did NOT trim
+  the actual menu/price data itself — that has to stay complete for
+  PRICING RULES and calculate_total accuracy. **Not yet tested on a real
+  call** — verify next call that Ada actually summarizes instead of
+  reciting, and that pricing/ordering accuracy is unaffected.
+- **Render cold-start timeout** — checked the v10 confirm call's Latency
+  Summary specifically for this; no 20+ second stall appeared anywhere
+  (max turn was 3,057ms, driven by a longer Cartesia voice synthesis on
+  the closing line, not a cold start). Only one data point though — this
+  doesn't confirm the cold-start risk is gone, just that it didn't fire in
+  this particular call. Re-check once more calls land.
+
+## Fifth round: response-time root cause + post-confirmation upsell (2026-09-26)
+
+The user did a follow-up test call against v11 and reported response time as
+the one remaining issue, plus a request for a post-confirmation upsell
+question and a new closing line. Investigated rather than guessed:
+
+- **The "feels slow" cause was found and confirmed, not the per-turn latency
+  pipeline.** Call `01a0df20-3cd2-7cce-83a1-b1232102a04b` (v11, 2026-09-26
+  22:10) shows per-turn latency unchanged (1276ms avg over 17 turns, same
+  ~1330ms floor as every prior measurement) — but its Logs tab shows a real
+  20-second hard failure: *"Your server rejected `tool-calls` webhook. Error:
+  timeout of 20000ms exceeded"* on `calculate_total`. This is the Render
+  free-tier cold-start risk this file flagged on 2026-09-19 and left
+  deferred — it has now visibly fired in a real call. Right after the
+  timeout, the total came out fragmented and interleaved with the "order
+  confirmed" line and the Log Order tool call, compounding the "feels
+  slow/off" impression on top of the literal 20s stall.
+- **Fix, two-track:**
+  1. Real fix (needs the user's own action, can't be done from here — it
+     means entering billing details on Render): upgrade off the free tier.
+     Not yet done as of this writing.
+  2. Free interim stopgap, done: added `GET /health` to
+     `order-calculator/index.js` (previously the service had exactly one
+     route, `POST /calculate-total` — confirmed by reading the file, not
+     assumed) for an external keep-alive service (e.g. cron-job.org) to
+     ping every ~10-14 minutes, so the instance is less likely to fully
+     spin down between calls. **This code change is committed locally but
+     NOT yet deployed** — Render deploys from the `origin` GitHub remote
+     (`po668221-pixel/bikass-restaurant-agent`), so it needs a `git push`
+     to actually reach production. Also needs the user to actually set up
+     the external cron ping themselves (an external account, can't be done
+     from here) pointed at `https://bikass-restaurant-agent.onrender.com/health`.
+  3. Tightened CONVERSATION FLOW steps 9-10 so Ada speaks the complete
+     total sentence before calling the order-logging tool and before
+     saying anything like "your order is confirmed" — fixes the
+     fragmented-delivery symptom from the same call.
+- **New upsell step + closing line, live as v12.** Added CONVERSATION FLOW
+  step 8: once items are confirmed, ask a brief upsell question (e.g.
+  dessert/ice cream) before revealing the total; declining proceeds to
+  total/log/close as before, accepting loops back through the existing
+  confirm-and-recalculate steps. Renumbered steps 9-11 and updated the
+  TOOL USE cross-references to match.
+  - Important finding that shaped this: Vapi's Advanced → Start Speaking
+    Plan → "Wait Seconds" (0-5s) looked like a way to satisfy "wait 5
+    seconds before asking" literally, but it's a global per-turn delay, not
+    scoped to one question — using it would have slowed down every single
+    response in the call, directly undoing the response-time fix above.
+    Deliberately left untouched. The "give it a beat" feel comes from the
+    upsell being its own separate conversational step instead, not a timed
+    pause.
+  - Closing line fix: the user's wanted phrase ends in "have a wonderful
+    day," which was not in the End Call Phrases list (the substring-match
+    mechanism from the earlier round). Without adding it, saying that exact
+    phrase would have silently failed to hang up the call — reintroducing
+    the goodbye-loop bug that round already fixed. Added `have a wonderful
+    day` to End Call Phrases; confirmed live via a fresh reload of the
+    assistant editor (not just the "Published" toast) both before and after
+    this section was written.
+- **Editor UI changed since the last round** — the System Prompt field
+  moved from a plain `<textarea>` to a CodeMirror 6 / rich-text dual editor
+  (Visual + Code tabs). The old native-textarea-value-setter trick no
+  longer applies to the System Prompt (it still works for plain fields like
+  End Call Phrases). A synthetic `paste` `ClipboardEvent` dispatched at the
+  focused `.cm-content` element does work for full-content replacement, but
+  a stray `.focus()` call between "select all" and the paste can silently
+  drop the selection and cause the new text to get appended after the old
+  text instead of replacing it — always verify post-edit length and
+  section counts (no duplicate `# IDENTITY`/`# TOOL USE` headers) before
+  publishing, and re-verify with a hard page reload afterward, not just the
+  in-session DOM state.
 
 ## Explicitly unresolved — verify before assuming true
 - Whether Deepgram Nova-3 actually handles Nigerian-accented English well

@@ -247,5 +247,11 @@ app.post('/calculate-total', (req, res) => {
   res.json({ results });
 });
 
+// Lightweight target for an external keep-alive pinger (e.g. cron-job.org)
+// hitting this every ~10-14 minutes, so Render's free-tier instance doesn't
+// fully spin down between real calls and cause a cold-start timeout on
+// /calculate-total (observed live: a 20000ms webhook timeout mid-call).
+app.get('/health', (req, res) => res.status(200).send('ok'));
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`order-calculator listening on ${PORT}`));
