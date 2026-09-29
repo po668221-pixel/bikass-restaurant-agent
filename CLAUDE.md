@@ -337,6 +337,38 @@ question and a new closing line. Investigated rather than guessed:
   publishing, and re-verify with a hard page reload afterward, not just the
   in-session DOM state.
 
+## Sixth round: deterministic menu-price reading (2026-09-29)
+
+A v12 test call (`01a0e286-d5f0-7000-a752-23bbaa8bc472`, 2026-09-27 14:01)
+surfaced a new bug: a caller asked for something off-menu ("biscuit"), Ada
+correctly used the trimmed-menu behavior from the Fourth round ("We do have
+snacks... meat pies, fish rolls... want the full list?"), the caller asked
+for the full list, and when Ada read it out the prices came out garbled —
+e.g. "Pizza roll for 2000, 800 naira" and "Popcorn for 1000 600 naira"
+instead of "two thousand eight hundred naira" / "one thousand six hundred
+naira". No order was placed in that call.
+
+**Root cause**: the deterministic "don't let the LLM convert digits to
+words" fix (the `totalWords` field from `calculate_total`, added early in
+this project) only ever covered the *final order total*. Any other price
+mention — reading a full category list, or naming one item's price ad hoc —
+still relied on Claude converting the digits to words itself in the moment,
+which is exactly the failure mode `totalWords` was built to eliminate, just
+recurring somewhere the original fix didn't reach.
+
+**Fix**: extended the same principle to every menu price, not just the
+total. Wrote a script reusing the *exact* `numberToWords`/`threeDigitsToWords`
+functions from `order-calculator/index.js` (so the spoken form can never
+drift from what `calculate_total` itself would say) to generate the
+Nigerian-style spoken form for all 131 menu items, and embedded it directly
+in THE MENU section as `Item Name - 1400 (one thousand, four hundred
+naira)`. Added PRICING RULES rule 7 telling Ada to always use that
+spelled-out phrase for any menu-price mention, and to never do her own
+digit-to-words conversion outside the order total. Live as v13; verified
+via a fresh full page reload after publishing (not just the "Published"
+toast), matching the same don't-trust-the-UI-state discipline the Fifth
+round's editor bug taught.
+
 ## Explicitly unresolved — verify before assuming true
 - Whether Deepgram Nova-3 actually handles Nigerian-accented English well
   enough as-is, or needs a custom vocabulary list built from real test-call
